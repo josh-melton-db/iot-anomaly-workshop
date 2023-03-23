@@ -23,10 +23,8 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define config for this notebook 
-dbutils.widgets.text("source_table", "bronze")
-dbutils.widgets.text("target_table", "silver")
-source_table = getArgument("source_table")
-target_table = getArgument("target_table")
+source_table = bronze
+target_table = silver
 checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
@@ -70,10 +68,10 @@ json_schema = StructType([
 #Parse/Transform
 transformed_df = (
   bronze_df
-    .withColumn("struct_payload", F.from_json("parsedValue", schema = json_schema)) #Apply schema to payload
+    .withColumn("struct_payload", F.from_json(F.col("parsedValue"), schema = json_schema)) #Apply schema to payload
     .select("struct_payload.*", F.from_unixtime("struct_payload.timestamp").alias("datetime"))
     .drop('timestamp')
-            )
+)
 
 #Uncomment to display the transformed data
 #display(transformed_df)
@@ -93,9 +91,14 @@ transformed_df = (
     .option("checkpointLocation", checkpoint_location_target)
     .trigger(once = True) # or use .trigger(processingTime='30 seconds') to continuously stream and feel free to modify the processing window
     .table(f"{database}.{target_table}")
+    .awaitTermination()
 )
 
 # COMMAND ----------
 
 #Display Silver Table
 display(spark.table(f"{database}.{target_table}"))
+
+# COMMAND ----------
+
+

@@ -21,17 +21,15 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define config for this notebook 
-dbutils.widgets.text("source_table", "silver")
-dbutils.widgets.text("target_table", "gold")
-source_table = getArgument("source_table")
-target_table = getArgument("target_table")
+source_table = feature
+target_table = gold
 checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC 
-# MAGIC ### Read Silver Data
+# MAGIC ### Read Silver Feature Data
 
 # COMMAND ----------
 

@@ -21,10 +21,8 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define config for this notebook 
-dbutils.widgets.text("source_table", "silver")
-dbutils.widgets.text("target_table", "feaures")
-source_table = getArgument("source_table")
-target_table = getArgument("target_table")
+source_table = silver
+target_table = feature
 checkpoint_location_target = f"{checkpoint_path}/dataset"
 
 # COMMAND ----------

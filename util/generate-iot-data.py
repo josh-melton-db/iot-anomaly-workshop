@@ -27,13 +27,14 @@
 
 # COMMAND ----------
 
-# MAGIC %run ./notebook-config
+# MAGIC %run ./notebook-config $reset_all_data=false
 
 # COMMAND ----------
 
 import dbldatagen as dg
 import dbldatagen.distributions as dist
 from pyspark.sql.types import IntegerType, FloatType, StringType, LongType
+from pyspark.sql.functions import create_map, lit, col,to_json
 
 states = [ 'AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA',
            'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME',
@@ -65,55 +66,30 @@ df_spec = (
   .withColumn("sensor_2", IntegerType(), minValue=0, maxValue=10, random=True)
   .withColumn("sensor_3", FloatType(), minValue=0.0001, maxValue=1.0001, random=True)
   .withColumn("state", StringType(), values=states, random=True)
-)
-                            
+)        
 df = df_spec.build()
-display(df)
+
+# COMMAND ----------
+
+# queryStr = 'create_map(' + ', '.join(["lit('"+c+"'), col('"+c+"')" for c in df.columns]) + ')'
+# print(queryStr)
+
+# COMMAND ----------
+
+df = df.withColumn('parsedValue', to_json(struct('*'))).select('parsedValue')
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Write to Kafka
+# MAGIC Write to Raw, remove spark's extra folders
 
 # COMMAND ----------
 
-from pyspark.sql.functions import to_json, struct, col, cast
-from pyspark.sql.types import BinaryType
-import time
-
-#Get the data ready for Kafka
-kafka_ready_df = (
-                  df.select(
-                    col("id").cast(BinaryType()).alias("key"),
-                    to_json(
-                      struct(
-                        [col(column) for column in df.columns]
-                      )
-                    ).cast(BinaryType()).alias("value")
-                  )
-)
-
-display(kafka_ready_df)
+df.write.mode('append').format('json').save(raw_path)
+for f in dbutils.fs.ls(raw_path):
+  if f.path.split('/')[-1][0] == "_":
+    dbutils.fs.rm(f.path, True)
 
 # COMMAND ----------
 
-options = {
-    "kafka.ssl.endpoint.identification.algorithm": "https",
-    "kafka.sasl.jaas.config": sasl_config,
-    "kafka.sasl.mechanism": sasl_mechanism,
-    "kafka.security.protocol" : security_protocol,
-    "kafka.bootstrap.servers": kafka_bootstrap_servers,
-    "group.id": 1,
-    "subscribe": topic,
-    "topic": topic,
-    "checkpointLocation": checkpoint_path
-}
 
-#Write to Kafka
-(
-  kafka_ready_df
-    .write
-    .format("kafka")
-    .options(**options)
-    .save()
-)

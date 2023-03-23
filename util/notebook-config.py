@@ -1,34 +1,53 @@
 # Databricks notebook source
-# DBTITLE 1,Kafka config - see the RUNME notebook for instructions on setting up secrets
-# Either configure a secret scope containing the credentials for authenticating with Kafka, or replace with your own credentials
-
-kafka_bootstrap_servers = dbutils.secrets.get("solution-accelerator-cicd", "iot-anomaly-kafka-bootstrap-server")
-security_protocol = "SASL_SSL"
-sasl_mechanism = "PLAIN"
-sasl_username = dbutils.secrets.get("solution-accelerator-cicd", "iot-anomaly-sasl-username")
-sasl_password = dbutils.secrets.get("solution-accelerator-cicd", "iot-anomaly-sasl-password")
-topic = "iot_msg_topic"
-sasl_config = f'org.apache.kafka.common.security.plain.PlainLoginModule required username="{sasl_username}" password="{sasl_password}";'
+dbutils.widgets.dropdown("reset_all_data", "false", ["true", "false"])
 
 # COMMAND ----------
 
 # DBTITLE 1,Set database and streaming checkpoint
-checkpoint_path = "/dbfs/tmp/iot-anomaly-detection/checkpoints" 
-database = "rvp_iot_sa"
+checkpoint_path = "/dbfs/tmp/josh_melton/iot-anomaly-detection/checkpoints" 
+raw_path = "/dbfs/tmp/josh_melton/iot-anomaly-detection/raw"
+database = "iot_anomaly_jlm"
+bronze = "bronze_iot_anomaly"
+silver = "silver_iot_anomaly"
+feature = "feature_iot_anomaly"
+gold = "gold_iot_anomaly"
 
 # COMMAND ----------
 
-# dbutils.fs.rm(checkpoint_path, True) # resetting checkpoint - uncomment this out if you want to reset data for this accelerator 
-# spark.sql(f"drop database if exists {database} cascade") # resetting database - comment this out if you want data to accumulate in tables for this accelerator over time
+if dbutils.widgets.get("reset_all_data") == "true":
+  dbutils.fs.rm(checkpoint_path, True) 
+  dbutils.fs.rm(raw_path, True) 
+  spark.sql(f"drop database if exists {database} cascade") 
 
 # COMMAND ----------
 
 # DBTITLE 1,Database settings
 spark.sql(f"create database if not exists {database}")
-
-# COMMAND ----------
-
-
+spark.sql(f"""create table if not exists {database}.{bronze} (
+  parsedValue STRING
+  )
+""")
+spark.sql(f"""create table if not exists {database}.{silver} (
+  device_id INT,
+  device_model STRING,
+  datetime STRING,
+  sensor_1 FLOAT, 
+  sensor_2 FLOAT,
+  sensor_3 FLOAT,
+  state STRING
+  )
+""")
+spark.sql(f"""create table if not exists {database}.{feature} (
+  device_id INT,
+  device_model STRING,
+  datetime STRING,
+  sensor_1 FLOAT, 
+  sensor_2 FLOAT,
+  sensor_3 FLOAT,
+  state STRING,
+  anamoly INT
+  )
+""")
 
 # COMMAND ----------
 
