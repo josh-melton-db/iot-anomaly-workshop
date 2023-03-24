@@ -16,7 +16,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define configs that are consistent throughout the accelerator
-# MAGIC %run ./util/notebook-config
+# MAGIC %run ../util/notebook-config $reset_all_data=false
 
 # COMMAND ----------
 

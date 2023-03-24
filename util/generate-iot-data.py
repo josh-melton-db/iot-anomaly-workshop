@@ -34,16 +34,13 @@
 import dbldatagen as dg
 import dbldatagen.distributions as dist
 from pyspark.sql.types import IntegerType, FloatType, StringType, LongType
-from pyspark.sql.functions import create_map, lit, col,to_json
+from pyspark.sql.functions import to_json, struct
 
 states = [ 'AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA',
            'HI', 'IA', 'ID', 'IL', 'IN', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME',
            'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ', 'NM',
            'NV', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX',
            'UT', 'VA', 'VT', 'WA', 'WI', 'WV', 'WY' ]
-
-table_name = "iot_stream_example_"
-spark.sql(f"drop table if exists {table_name}")
 
 data_rows = 2000
 df_spec = (
