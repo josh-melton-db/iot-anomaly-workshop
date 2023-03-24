@@ -23,31 +23,6 @@ if dbutils.widgets.get("reset_all_data") == "true":
 
 # DBTITLE 1,Database settings
 spark.sql(f"create database if not exists {database}")
-# spark.sql(f"""create table if not exists {database}.{bronze} (
-#   parsedValue STRING
-#   )
-# """)
-# spark.sql(f"""create table if not exists {database}.{silver} (
-#   device_id INT,
-#   device_model STRING,
-#   datetime STRING,
-#   sensor_1 FLOAT, 
-#   sensor_2 FLOAT,
-#   sensor_3 FLOAT,
-#   state STRING
-#   )
-# """)
-# spark.sql(f"""create table if not exists {database}.{feature} (
-#   device_id INT,
-#   device_model STRING,
-#   datetime STRING,
-#   sensor_1 FLOAT, 
-#   sensor_2 FLOAT,
-#   sensor_3 FLOAT,
-#   state STRING,
-#   anamoly INT
-#   )
-# """)
 
 # COMMAND ----------
 
