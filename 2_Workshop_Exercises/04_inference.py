@@ -1,5 +1,8 @@
 # Databricks notebook source
-# MAGIC %md You may find this series of notebooks at https://github.com/databricks-industry-solutions/iot-anomaly-detection. 
+# MAGIC %md 
+# MAGIC Exercises: for the rest of this notebook, find the ```#TODO```s and fill in the ```...``` with your answers </br></br>
+# MAGIC Key highlights for this notebook:
+# MAGIC - identify the optimal hyperparameters for our demand forecasting model on a single SKU using pandas and Hyperopt
 
 # COMMAND ----------
 
@@ -16,7 +19,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define configs that are consistent throughout the accelerator
-# MAGIC %run ../util/notebook-config $reset_all_data=false
+# MAGIC %run ../util/notebook-config
 
 # COMMAND ----------
 
@@ -33,7 +36,7 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-#Read Silver Data
+# Read Silver Data
 silver_df = (
   spark.readStream
     .format("delta")
@@ -48,25 +51,29 @@ silver_df = (
 
 # COMMAND ----------
 
-import pyspark.pandas as ps
+# MAGIC %md
+# MAGIC `production` </br>
+# MAGIC `predict = mlflow.pyfunc.spark_udf()`</br>
+# MAGIC `predict(input_df.columns)`
+
+# COMMAND ----------
+
 import mlflow
 
-#Feature and predict function
+# Build a function that loads our model into a function and uses that function to make predictions
 def predict_anomalies(data, epoch_id):
   # Load the model
-  model = f'models:/{model_name}/production'
-  model_fct = mlflow.pyfunc.spark_udf(spark, model_uri=model)
+  model = f'models:/{model_name}/...' # TODO 1: define which stage of your model you'll want to use for predictions
+  ...(spark, model_uri=model) # TODO 2: create a function that you can use to make predictions 
 
   # Make the prediction
-  prediction_df = data.withColumn('prediction', model_fct(*data.drop('datetime', 'device_id').columns))
+  prediction_df = data.withColumn('prediction', ...(*data.drop('datetime', 'device_id').columns)) # TODO 3: Use the function you created above to make the predictions on the input data
   
   # Clean up the output
   clean_pred_df = (prediction_df.select('device_id', 'datetime', 'sensor_1', 'sensor_2', 'sensor_3', 'prediction'))
   
   # Write the output to a Gold Delta table
   clean_pred_df.write.format('delta').mode('append').option("mergeSchema", "true").saveAsTable(f"{database}.{target_table}")
-   
-#  return data_sdf
 
 # COMMAND ----------
 
@@ -76,12 +83,12 @@ def predict_anomalies(data, epoch_id):
 
 # COMMAND ----------
 
-# Stream predicted outputs
+# Make predictions on the streaming data coming in
 (
   silver_df
     .writeStream
-    .foreachBatch(predict_anomalies)
-    .trigger(once = True)
+    .foreachBatch(predict_anomalies) 
+    .trigger(availableNow=True)
     .start()
     .awaitTermination()
 )

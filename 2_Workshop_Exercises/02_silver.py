@@ -1,5 +1,8 @@
 # Databricks notebook source
-# MAGIC %md You may find this series of notebooks at https://github.com/databricks-industry-solutions/iot-anomaly-detection. 
+# MAGIC %md 
+# MAGIC Exercises: for the rest of this notebook, find the ```#TODO```s and fill in the ```...``` with your answers </br></br>
+# MAGIC Key highlights for this notebook:
+# MAGIC - parse the data landed in your bronze delta table and stream it into a silver delta table
 
 # COMMAND ----------
 
@@ -18,7 +21,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define configs that are consistent throughout the accelerator
-# MAGIC %run ../util/notebook-config $reset_all_data=false
+# MAGIC %run ../util/notebook-config
 
 # COMMAND ----------
 
@@ -35,17 +38,21 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-from pyspark.sql import functions as F
+# MAGIC %md
+# MAGIC `spark.readStream.format("delta")`
+
+# COMMAND ----------
+
+from pyspark.sql.functions import from_json, from_unixtime, col # NOTE: notice the spark functions we're importing - we'll use these soon!
 from pyspark.sql.types import StructType, StructField, FloatType, IntegerType, StringType
 
 bronze_df = (
-  spark.readStream
-    .format("delta")
-    .table(f"{database}.{source_table}")
+  ... # TODO 1: specify how to read from our source delta table as a stream using spark
+  .table(f"{database}.{source_table}")
 )
 
-#Uncomment to view the bronze data
-#display(bronze_df)
+# # You can uncomment the line below to view the bronze data as it comes in - just don't forget to stop the stream when you're done!
+# display(bronze_df)
 
 # COMMAND ----------
 
@@ -54,7 +61,13 @@ bronze_df = (
 
 # COMMAND ----------
 
-#Schema for the Payload column
+# MAGIC %md
+# MAGIC `from_json` </br>
+# MAGIC `from_unixtime`
+
+# COMMAND ----------
+
+# Schema for the Payload column
 json_schema = StructType([
   StructField("timestamp", IntegerType(), True),
   StructField("device_id", IntegerType(), True),
@@ -65,16 +78,16 @@ json_schema = StructType([
   StructField("state", StringType(), True)
 ])
 
-#Parse/Transform
+# Parse/Transform
 transformed_df = (
   bronze_df
-    .withColumn("struct_payload", F.from_json(F.col("parsedValue"), schema = json_schema)) #Apply schema to payload
-    .select("struct_payload.*", F.from_unixtime("struct_payload.timestamp").alias("datetime"))
+    .withColumn("struct_payload", ...(col("parsedValue"), schema = json_schema)) # TODO 2: Parse json and apply schema to payload
+    .select("struct_payload.*", ...("struct_payload.timestamp").alias("datetime")) # TODO 3: Convert the timestamp column from timestamp to datetime type
     .drop('timestamp')
 )
 
-#Uncomment to display the transformed data
-#display(transformed_df)
+# # Uncomment to display the transformed data
+# display(transformed_df)
 
 # COMMAND ----------
 
@@ -83,21 +96,31 @@ transformed_df = (
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC `.option("checkpointLocation", checkpoint_location_target)` </br>
+# MAGIC `.trigger(availableNow=True)`
+
+# COMMAND ----------
+
 (
   transformed_df
-    .writeStream
-    .format("delta")
+    .writeStream.format("delta")
     .outputMode("append")
-    .option("checkpointLocation", checkpoint_location_target)
-    .trigger(once = True) # or use .trigger(processingTime='30 seconds') to continuously stream and feel free to modify the processing window
+    ...
+    ...
     .table(f"{database}.{target_table}")
     .awaitTermination()
 )
 
 # COMMAND ----------
 
-#Display Silver Table
-display(spark.table(f"{database}.{target_table}"))
+# MAGIC %md 
+# MAGIC `spark.table("...").display()`
+
+# COMMAND ----------
+
+# Display Silver Table
+spark.table(f"{database}.{target_table}")... # TODO 4: display the resulting table
 
 # COMMAND ----------
 

@@ -16,7 +16,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Define configs that are consistent throughout the accelerator
-# MAGIC %run ../util/notebook-config $reset_all_data=false
+# MAGIC %run ../util/notebook-config
 
 # COMMAND ----------
 
@@ -30,24 +30,24 @@ checkpoint_location_target = f"{checkpoint_path}/dataset"
 # DBTITLE 1,Read and label the Silver data
 from pyspark.sql import functions as F
 
-#Read the Silver Data
+# Read the Silver Data
 silver_df = spark.table(f"{database}.{source_table}")
 
-#Uncomment to display silver_df
-#display(silver_df)
+# # Uncomment to display silver_df
+# display(silver_df)
 
 # COMMAND ----------
 
 import pandas as pd
 from pyspark.sql.functions import *
 
-#Label the Silver data
+# Label the Silver data
 labeled_df = (
   silver_df
     .withColumn("anomaly", when(col('sensor_1') > 80, 1).when(col('sensor_1') < 10, 1).when(col('sensor_1') > 65, round(rand(1))).when(col('sensor_1') < 25, round(rand(1))).otherwise(0))
 )
 
-#Display the labeled data
+# Display the labeled data
 display(labeled_df)
 
 # COMMAND ----------
@@ -153,6 +153,10 @@ experiment_id = run.info.experiment_id
 
 # COMMAND ----------
 
+best_params
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC 
 # MAGIC You can look at the experiment logging including parameters, metrics, recall curves, etc. by clicking the "experiment" link above or the MLflow Experiments icon in the right navigation pane
@@ -164,11 +168,10 @@ from pyspark.sql.functions import *
 
 experiment_Df = spark.read.format("mlflow-experiment").load(experiment_id)
 
-#Find the best run based on F1 score
+# Find the best run based on F1 score
 best_run = (
   experiment_Df
-    .filter(
-      experiment_Df.tags["mlflow.rootRunId"]==run_id)
+    .filter(experiment_Df.tags["mlflow.rootRunId"]==run_id)
     .orderBy(experiment_Df.metrics["training_f1_score"].desc())
     .limit(1)
     .first()['run_id']

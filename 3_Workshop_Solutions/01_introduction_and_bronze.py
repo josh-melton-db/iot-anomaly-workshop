@@ -7,7 +7,7 @@
 # MAGIC 
 # MAGIC In this solution accelerator, we show how to build a streaming pipeline for IoT data, train a machine learning model on that data, and use that model to make predictions on new IoT data.
 # MAGIC 
-# MAGIC The pattern shown consumes data from an Apache Kafka stream, although in this demo we simulate that from . Kafka is a distributed event streaming message bus that combines the best features of queuing and publish-subscribe technologies. [Kafka connectors for Spark\\({^T}{^M}\\) Structured Streaming](https://docs.databricks.com/structured-streaming/kafka.html) are packaged together within the Databricks runtime, making it easy to get started. Using these connectors, data from Kafka streams can easily be persisted into Delta Lakehouse. From there, advanced analytics or machine learning algorithms may be executed on the data.
+# MAGIC The pattern shown consumes data from an Apache Kafka stream, although in this demo we simulate that by dropping json files into cloud storage and streaming them using <a href="https://docs.databricks.com/ingestion/auto-loader/index.html">autoloader</a>. Kafka is a distributed event streaming message bus that combines the best features of queuing and publish-subscribe technologies. [Kafka connectors for Spark\\({^T}{^M}\\) Structured Streaming](https://docs.databricks.com/structured-streaming/kafka.html) are packaged together within the Databricks runtime, making it easy to get started. Using these connectors, data from Kafka streams can easily be persisted into Delta Lakehouse. From there, advanced analytics or machine learning algorithms may be executed on the data.
 # MAGIC 
 # MAGIC You may find this series of notebooks at https://github.com/databricks-industry-solutions/iot-anomaly-detection. 
 # MAGIC 
@@ -21,14 +21,11 @@
 # MAGIC 
 # MAGIC <p></p>
 # MAGIC <center><img src="https://github.com/databricks-industry-solutions/iot-anomaly-detection/blob/main/images/03_bronze.jpg?raw=true" width="30%"></center>
-# MAGIC 
-# MAGIC 
-# MAGIC This notebook will read iot data from a location in dbfs and put it into a Delta Lake table called "bronze_iot_anomaly" - for more detail on streaming from kafka see here JOSH TODO: INSERT LINK TO KAFKA DOCS
 
 # COMMAND ----------
 
 # DBTITLE 1,Define configs that are consistent throughout the accelerator
-# MAGIC %run ../util/notebook-config $reset_all_data=false
+# MAGIC %run ../util/notebook-config
 
 # COMMAND ----------
 
@@ -39,27 +36,27 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-# MAGIC %md 
-# MAGIC 
-# MAGIC ### Write the streaming source data to Bronze Delta table
-# MAGIC 
-# MAGIC Here we generate some data and pump the data into the source location. For your use case, if there is a Kafka topic with data continuously arriving, you can skip the following data generation step.
-
-# COMMAND ----------
-
 # MAGIC %run ../util/generate-iot-data
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC JOSH TODO DESCRIPTION
+# MAGIC %md 
+# MAGIC 
+# MAGIC ### Write the streaming source data to Bronze Delta table
+# MAGIC 
+# MAGIC After generating artificial json data and writing it to cloud storage, we stream in the newly landed files and write them to delta lake, the efficient open source storage format built on parquet. For files landing in cloud storage we use <a href="https://docs.databricks.com/ingestion/auto-loader/index.html">autoloader</a> as a source that ingests the new files in a highly scalable, fault tolerant way. Autoloader also offers automatic schema inference, but in this instance we'll define the schema explicitly
+
+# COMMAND ----------
+
+from pyspark.sql.types import StructType, StructField
+expected_schema = StructType([StructField('parsedValue', StringType(), True)])
 
 # COMMAND ----------
 
 read_raw = (
   spark.readStream.format('cloudFiles')
   .option("cloudFiles.format", "json")
-  .schema(df.schema) # JOSH TODO: DEFINE SCHEMA EXPLICITLY
+  .schema(expected_schema)
   .load(raw_path)
   .writeStream.format("delta")
   .option("checkpointLocation", checkpoint_path)
@@ -70,10 +67,8 @@ read_raw = (
 
 # COMMAND ----------
 
-#Display records from the Bronze table
-display(
-spark.table(f"{database}.{target_table}")
-)
+# Display records from the Bronze table
+spark.table(f"{database}.{target_table}").display()
 
 # COMMAND ----------
 
