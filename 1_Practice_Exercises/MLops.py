@@ -294,7 +294,7 @@ DA.cleanup()
 # MAGIC 
 # MAGIC 
 # MAGIC ## Review
-# MAGIC **Question:** What can MLflow Tracking log?
+# MAGIC **Question:** What can MLflow Tracking log? </br>
 # MAGIC **Answer:** MLflow can log the following:
 # MAGIC - **Parameters:** inputs to a model
 # MAGIC - **Metrics:** the performance of the model

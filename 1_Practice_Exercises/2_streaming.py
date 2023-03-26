@@ -239,37 +239,7 @@ streamingQuery = (streamingDF
 # MAGIC 
 # MAGIC Note that triggers are specified when defining how data will be written to a sink and control the frequency of micro-batches. By default, Spark will automatically detect and process all data in the source that has been added since the last trigger; some sources allow configuration to limit the size of each micro-batch.
 # MAGIC 
-# MAGIC :BEST_PRACTICE: Read [this blog post](https://databricks.com/blog/2017/05/22/running-streaming-jobs-day-10x-cost-savings.html) to learn more about using `Trigger.Once` to simplify CDC with a hybrid streaming/batch design.
-
-# COMMAND ----------
-
-# MAGIC %md-sandbox
-# MAGIC 
-# MAGIC ## Managing & Monitoring Streaming Queries<
-# MAGIC 
-# MAGIC Databricks notebooks have built-in interative dashboards that allow users to manually monitor streaming performance.
-# MAGIC 
-# MAGIC ![](https://files.training.databricks.com/images/adbcore/streaming-dashboard.png)
-# MAGIC 
-# MAGIC <img alt="Best Practice" title="Best Practice" style="vertical-align: text-bottom; position: relative; height:1.75em; top:0.3em" src="https://files.training.databricks.com/static/images/icon-blue-ribbon.svg"/> To log or monitor streaming metrics to external systems, users should define a `StreamingQueryListener`, as demonstrated [here](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#reporting-metrics-programmatically-using-asynchronous-apis).
-# MAGIC 
-# MAGIC The `StreamingQuery` object can be used to [monitor and manage the stream](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#managing-streaming-queries).
-# MAGIC 
-# MAGIC The `StreamingQuery` object can be captured as the return of a write definition or accessed from within the active streams list, demonstrated here:
-
-# COMMAND ----------
-
-for s in spark.streams.active:         # Iterate over all streams
-    print(s.id)                        # Print the stream's id
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC The `recentProgress` attribute allows access to metadata about recently processed micro-batches.
-
-# COMMAND ----------
-
-streamingQuery.recentProgress
+# MAGIC BEST_PRACTICE: Read [this blog post](https://databricks.com/blog/2017/05/22/running-streaming-jobs-day-10x-cost-savings.html) to learn more about using `Trigger.Once` to simplify CDC with a hybrid streaming/batch design.
 
 # COMMAND ----------
 
@@ -311,22 +281,7 @@ display(streamingDF, streamName = "streaming_display")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Using the value passed to `streamName` in the call to `display`, we can programatically access this specific stream:
-
-# COMMAND ----------
-
-for stream in spark.streams.active:   
-  if stream.name == "streaming_display":            
-    print("Found {} ({})".format(stream.name, stream.id))
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC Since the `streamName` gets registered as a temporary table pointing to the memory sink, we can use SQL to query the sink.
-
-# COMMAND ----------
-
-spark.catalog.listTables()
 
 # COMMAND ----------
 

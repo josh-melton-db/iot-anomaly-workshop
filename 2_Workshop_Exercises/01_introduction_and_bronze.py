@@ -55,9 +55,15 @@ expected_schema = StructType([StructField('parsedValue', StringType(), True)])
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `spark.readStream.format(...)` </br>
-# MAGIC `spark.writeStream.format("delta")` </br>
-# MAGIC `.trigger(availableNow=True)`
+# MAGIC Example of reading as a stream, writing the results to delta, triggered as a "scheduled stream":
+# MAGIC ```
+# MAGIC (
+# MAGIC   spark.readStream.format(...)
+# MAGIC   ...
+# MAGIC   .writeStream.format("delta")
+# MAGIC   .trigger(availableNow=True)
+# MAGIC )
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -69,7 +75,7 @@ read_raw = (
   .load(raw_path)
   ... # TODO 2: specify how to write a stream to a delta table using spark
   .option("checkpointLocation", checkpoint_path)
-  ... # TODO 3: specify how the stream should be triggered
+  ... # TODO 3: specify how the stream should be triggered to run
   .toTable(f"{database}.{target_table}")
   .awaitTermination()
 )
@@ -77,7 +83,10 @@ read_raw = (
 # COMMAND ----------
 
 # MAGIC %md 
-# MAGIC `spark.table("...").display()`
+# MAGIC Example of reading from a table and displaying:
+# MAGIC ```
+# MAGIC spark.table("...").display()
+# MAGIC ```
 
 # COMMAND ----------
 

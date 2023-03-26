@@ -57,6 +57,7 @@ display(labeled_df)
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC Example of writing the results of a dataframe to a delta table in append mode: </br>
 # MAGIC `features_df.write.saveAsTable("target_table", mode="append")`
 
 # COMMAND ----------
@@ -107,7 +108,13 @@ def make_pipeline(max_depth, max_leaf_nodes):
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `mlflow.start_run(run_name="my_sklearn_model")`
+# MAGIC Example of starting an mlflow run in order to track the results in an mlflow experiment:
+# MAGIC ```
+# MAGIC mlflow.start_run(run_name="my_sklearn_model") as run:
+# MAGIC   run_id = run.info.run_uuid
+# MAGIC   model.fit(train_x, train_y)
+# MAGIC   predictions = model.predict(text_x)
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -132,12 +139,16 @@ with ... as run: # TODO 2: start an MLflow run so that our trial gets tracked in
 
 # MAGIC %md
 # MAGIC 
-# MAGIC You can look at the experiment logging including parameters, metrics, recall curves, etc. by clicking the "experiment" link above or the MLflow Experiments icon in the right navigation pane
+# MAGIC You can look at the experiment logging including parameters, metrics, recall curves, etc. by clicking the "experiment" link above or the MLflow Experiments icon in the right navigation pane. Once we're done with experimentation we'll register the model to our MLflow model registry
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `mlflow.register_model`
+# MAGIC Example of registering a model:
+# MAGIC ```
+# MAGIC model_uri = f"runs:/{run_id}/{model_name}"
+# MAGIC model_details = mlflow.register_model(model_uri=model_uri, name=f'{model_name}')
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -153,12 +164,23 @@ model_details = ...(model_uri, model_name) # TODO 3: register the model to mlflo
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ```client.transition_model_version_stage(...)```
+# MAGIC Example of transitioning a registered model to production
+# MAGIC ```
+# MAGIC from mlflow.tracking.client import MlflowClient
+# MAGIC 
+# MAGIC client = MlflowClient()
+# MAGIC 
+# MAGIC client.transition_model_version_stage(
+# MAGIC   name=model_details.name,
+# MAGIC   version=model_details.version,
+# MAGIC   stage="Production"
+# MAGIC )
+# MAGIC ```
 
 # COMMAND ----------
 
 # DBTITLE 1,Transition the model to "Production" stage in the registry
-client.transition_model_version_stage(  # TODO 4: use the mlflow client to transition the model version to the "Production" stage
+...(  # TODO 4: use the mlflow client to transition the model version to the "Production" stage
   name = model_name,
   version = model_details.version,
   stage="...",   # TODO 5: promote to Production stage

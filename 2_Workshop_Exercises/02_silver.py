@@ -39,7 +39,10 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `spark.readStream.format("delta")`
+# MAGIC Example of reading from a delta table as a stream:
+# MAGIC ```
+# MAGIC spark.readStream.format("delta")
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -62,8 +65,14 @@ bronze_df = (
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `from_json` </br>
-# MAGIC `from_unixtime`
+# MAGIC Example of extracting fields from json:
+# MAGIC ```
+# MAGIC json_df.select(from_json('{"a":1, "b":0.8}', schema))
+# MAGIC ```
+# MAGIC Example of extracting a timestamp from a unixtime column:
+# MAGIC ```
+# MAGIC time_df.select(from_unixtime('unix_time').alias('ts'))
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -97,8 +106,18 @@ transformed_df = (
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `.option("checkpointLocation", checkpoint_location_target)` </br>
-# MAGIC `.trigger(availableNow=True)`
+# MAGIC Example of setting a checkpoint location for a stream (where it saves its automatic bookkeeping)
+# MAGIC ```
+# MAGIC (
+# MAGIC   streaming_df
+# MAGIC   .writeStream.format("delta")
+# MAGIC   .option("append")
+# MAGIC   .option("checkpointLocation", checkpoint_location_target)
+# MAGIC   .trigger(availableNow=True)
+# MAGIC   .table(target_location)
+# MAGIC   .awaitTermination()
+# MAGIC )
+# MAGIC ```
 
 # COMMAND ----------
 
@@ -106,8 +125,8 @@ transformed_df = (
   transformed_df
     .writeStream.format("delta")
     .outputMode("append")
-    ...
-    ...
+    ... # TODO 4: set the path to the folder where the stream can save its checkpoint information
+    ... # TODO 5: define how often the stream should be triggered to check for new dataa
     .table(f"{database}.{target_table}")
     .awaitTermination()
 )
@@ -115,12 +134,13 @@ transformed_df = (
 # COMMAND ----------
 
 # MAGIC %md 
+# MAGIC Example of reading and displaying a table: </br>
 # MAGIC `spark.table("...").display()`
 
 # COMMAND ----------
 
 # Display Silver Table
-spark.table(f"{database}.{target_table}")... # TODO 4: display the resulting table
+...(f"{database}.{target_table}")... # TODO 6: read the table at database.target_table and display the results
 
 # COMMAND ----------
 

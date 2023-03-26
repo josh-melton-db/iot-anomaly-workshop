@@ -48,12 +48,6 @@
 
 dataPath = "/databricks-datasets/Rdatasets/data-001/csv/ggplot2/diamonds.csv"
 
-diamonds = spark.read.format("csv")\
-  .option("header","true")\
-  .option("inferSchema", "true")\
-  .load(dataPath)
-  
-# this can be done by wrapping in parenthesis instead of using backslashes on each line to attain the same result
 diamonds = (
   spark.read.format("csv")   
   .option("header","true")
@@ -115,23 +109,11 @@ fancy_diamonds_df = df2.where(col('is_fancy'))  # could also replace where() wit
 
 # COMMAND ----------
 
-fancy_diamonds_df.where(~col('is_fancy')).display()   # ~ is negation, read "is_fancy" is not true
+fancy_diamonds_df.where(~col('is_fancy')).display()   # ~ is negation, read "is_fancy" is not true - this should return no results because of our filter from above
 
 # COMMAND ----------
 
 fancy_diamonds_df.where(col('is_fancy')).display()
-
-# COMMAND ----------
-
-# MAGIC %md These transformations are now complete in a sense but nothing has happened. As you'll see above we don't get any results back! 
-# MAGIC 
-# MAGIC The reason for that is these computations are *lazy* in order to build up the entire flow of data from start to finish required by the user. This is a intelligent optimization for two key reasons. Any calculation can be recomputed from the very source data allowing Apache Spark to handle any failures that occur along the way, successfully handle stragglers. Secondly, Apache Spark can optimize computation so that data and computation can be `pipelined` as we mentioned above. Therefore, with each transformation Apache Spark creates a plan for how it will perform this work.
-# MAGIC 
-# MAGIC To get a sense for what this plan consists of, we can use the `explain` method. Remember that none of our computations have been executed yet, so all this explain method does is tell us the lineage for how to compute this exact dataset.
-
-# COMMAND ----------
-
-df2.explain()
 
 # COMMAND ----------
 
@@ -142,9 +124,3 @@ fancy_diamonds_df.write.format("delta").mode("overwrite").saveAsTable("fancy_dia
 # MAGIC %sql
 # MAGIC select * 
 # MAGIC from fancy_diamonds
-
-# COMMAND ----------
-
-# MAGIC %md ## Conclusion
-# MAGIC 
-# MAGIC In this notebook we've covered a ton of material! But you're now well on your way to understanding Spark and Databricks! Now that you've completed this notebook, you should hopefully be more familiar with the core concepts of Spark on Databricks.

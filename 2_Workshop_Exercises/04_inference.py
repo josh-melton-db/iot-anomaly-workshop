@@ -52,9 +52,12 @@ silver_df = (
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC `production` </br>
-# MAGIC `predict = mlflow.pyfunc.spark_udf()`</br>
-# MAGIC `predict(input_df.columns)`
+# MAGIC Example of retrieving the current production stage model, registering it as a spark function, and using it to make a prediction:
+# MAGIC ```
+# MAGIC model_version_uri = f"models:/{model_name}/production"
+# MAGIC predict = mlflow.pyfunc.spark_udf(spark, model_version_uri)
+# MAGIC predictions_df = input_df.withColumn("prediction", predict(input_df.columns))
+# MAGIC ```
 
 # COMMAND ----------
 
