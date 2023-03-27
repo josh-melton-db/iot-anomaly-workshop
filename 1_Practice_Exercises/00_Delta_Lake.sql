@@ -1,9 +1,4 @@
 -- Databricks notebook source
--- MAGIC %python
--- MAGIC dbutils.widgets.dropdown("reset_all_data", "false", ["true", "false"], "Reset all data")
-
--- COMMAND ----------
-
 -- MAGIC %md-sandbox
 -- MAGIC 
 -- MAGIC # Getting started with Delta Lake
@@ -59,7 +54,7 @@
 -- COMMAND ----------
 
 -- DBTITLE 1,Init the demo data under ${raw_data_location}/user_parquet.
--- MAGIC %run ../util/_resources/00-setup $reset_all_data=$reset_all_data
+-- MAGIC %run ../util/_resources/00-setup $reset_all_data=false
 
 -- COMMAND ----------
 

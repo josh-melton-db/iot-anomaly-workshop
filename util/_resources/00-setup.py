@@ -3,7 +3,7 @@ dbutils.widgets.dropdown("reset_all_data", "false", ["true", "false"], "Reset al
 
 # COMMAND ----------
 
-# MAGIC %run ../../../_resources/00-global-setup $reset_all_data=$reset_all_data $db_prefix=retail
+# MAGIC %run ./00-global-setup $reset_all_data=$reset_all_data $db_prefix=retail
 
 # COMMAND ----------
 
@@ -22,9 +22,13 @@ if reset_all_data or is_folder_empty(raw_data_location+"/user_json"):
   path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
   parent_count = path[path.rfind("Delta-Lake"):].count('/') - 1
   prefix = "./" if parent_count == 0 else parent_count*"../"
-  prefix = f'{prefix}_resources/'
+  prefix = f'{prefix}'
   dbutils.notebook.run(prefix+"01-load-data", 120, {"raw_data_location": raw_data_location})
   spark.sql("CREATE TABLE IF NOT EXISTS user_delta (id BIGINT, creation_date TIMESTAMP, firstname STRING, lastname STRING, email STRING, address STRING, gender INT, age_group INT)")
   spark.sql("ALTER TABLE user_delta SET TBLPROPERTIES (delta.enableChangeDataFeed = true)")
 else:
   print("data already existing. Run with reset_all_data=true to force a data cleanup for your local demo.")
+
+# COMMAND ----------
+
+
