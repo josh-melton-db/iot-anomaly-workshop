@@ -159,12 +159,12 @@ streamingDF = (spark
 # MAGIC 
 # MAGIC Streaming jobs have output modes similar to static/batch workloads. [More details here](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#output-modes).
 # MAGIC 
-# MAGIC | Mode   | Example | Notes |
-# MAGIC | ------------- | ----------- |
-# MAGIC | **Append** | `.outputMode("append")`     | _DEFAULT_ - Only the new rows appended to the Result Table since the last trigger are written to the sink. |
-# MAGIC | **Complete** | `.outputMode("complete")` | The entire updated Result Table is written to the sink. The individual sink implementation decides how to handle writing the entire table. |
-# MAGIC | **Update** | `.outputMode("update")`     | Only the rows in the Result Table that were updated since the last trigger will be outputted to the sink. Since Spark 2.1.1 |
-# MAGIC 
+# MAGIC <table>
+# MAGIC <tr><td><b>Mode</b></td> <td><b>Example</b></td> <td><b>Notes</b></td></tr>
+# MAGIC <tr><td>Append</td> <td>`.outputMode("append")` </td> <td>DEFAULT - Only the new rows appended to the Result Table since the last trigger are written to the sink.</td></tr>
+# MAGIC <tr><td>Complete</td> <td>`.outputMode("complete")`</td> <td>The entire updated Result Table is written to the sink. The individual sink implementation decides how to handle writing the entire table.</td></tr>
+# MAGIC <tr><td>Update</td> <td>`.outputMode("update")`</td> <td>Only the rows in the Result Table that were updated since the last trigger will be outputted to the sink. Since Spark 2.1.1</td></tr>
+# MAGIC </table>
 # MAGIC <img alt="Caution" title="Caution" style="vertical-align: text-bottom; position: relative; height:1.3em; top:0.0em" src="https://files.training.databricks.com/static/images/icon-warning.svg"/> Not all sinks will support `update` mode.
 
 # COMMAND ----------
