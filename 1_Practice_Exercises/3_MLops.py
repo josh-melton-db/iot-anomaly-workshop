@@ -232,12 +232,6 @@ client = MlflowClient()
 
 # COMMAND ----------
 
-import time
-
-time.sleep(10) # In case the registration is still pending
-
-# COMMAND ----------
-
 client.transition_model_version_stage(
   name=model_details.name,
   version=model_details.version,
@@ -253,6 +247,12 @@ client.transition_model_version_stage(
 # MAGIC Fetch the latest Production version of a model using a **`pyfunc`**.  Loading the model in this way allows us to use the model regardless of the package that was used to train it.
 # MAGIC 
 # MAGIC <img src="https://files.training.databricks.com/images/icon_note_24.png"/> You can load a specific version of the model too.
+
+# COMMAND ----------
+
+import time
+
+time.sleep(10) # In case the registration is still pending
 
 # COMMAND ----------
 
