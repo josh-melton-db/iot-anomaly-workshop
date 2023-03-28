@@ -49,7 +49,7 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-from pyspark.sql.types import StructType, StructField
+from pyspark.sql.types import StructType, StructField, StringType
 expected_schema = StructType([StructField('parsedValue', StringType(), True)])
 
 # COMMAND ----------
