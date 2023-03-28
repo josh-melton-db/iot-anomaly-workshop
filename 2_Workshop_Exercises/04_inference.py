@@ -66,8 +66,8 @@ import mlflow
 # Build a function that loads our model into a function and uses that function to make predictions
 def predict_anomalies(data, epoch_id):
   # Load the model
-  model = f'models:/{model_name}/...' # TODO 1: define which stage of your model you'll want to use for predictions
-  ...(spark, model_uri=model) # TODO 2: create a function that you can use to make predictions 
+  model_uri = f'...:/{model_name}/...' # TODO 1: define which stage of your model you'll want to use for predictions
+  ...(spark, model_uri=model_uri) # TODO 2: create a function that you can use to make predictions 
 
   # Make the prediction
   prediction_df = data.withColumn('prediction', ...(*data.drop('datetime', 'device_id').columns)) # TODO 3: Use the function you created above to make the predictions on the input data
@@ -100,3 +100,7 @@ def predict_anomalies(data, epoch_id):
 
 # DBTITLE 1,Display our results
 display(spark.table(f"{database}.{target_table}"))
+
+# COMMAND ----------
+
+

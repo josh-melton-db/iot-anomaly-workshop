@@ -57,7 +57,7 @@ display(labeled_df)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Example of writing the results of a dataframe to a delta table in append mode: </br>
+# MAGIC Example of batch writing the results of a dataframe to a delta table in append mode: </br>
 # MAGIC `features_df.write.saveAsTable("target_table", mode="append")`
 
 # COMMAND ----------
@@ -139,7 +139,7 @@ with ... as run: # TODO 2: start an MLflow run so that our trial gets tracked in
 
 # MAGIC %md
 # MAGIC 
-# MAGIC You can look at the experiment logging including parameters, metrics, recall curves, etc. by clicking the "experiment" link above or the MLflow Experiments icon in the right navigation pane. Once we're done with experimentation we'll register the model to our MLflow model registry
+# MAGIC You can look at the experiment logging including parameters, metrics, recall curves, etc. by clicking the "experiment" link above or the MLflow Experiments icon in the right navigation pane. You can try running with different parameters and use the experiment to track what produces the best results. Once we're done with experimentation we'll register the model to our MLflow model registry
 
 # COMMAND ----------
 
@@ -159,7 +159,7 @@ client = MlflowClient()
 model_uri = f"runs:/{run_id}/model"
 
 # Register the model
-model_details = ...(model_uri, model_name) # TODO 3: register the model to mlflow's model registry
+model_details = ...(..., model_name) # TODO 3: register the model to mlflow's model registry
 
 # COMMAND ----------
 

@@ -90,8 +90,8 @@ json_schema = StructType([
 # Parse/Transform
 transformed_df = (
   bronze_df
-    .withColumn("struct_payload", ...(col("parsedValue"), schema = json_schema)) # TODO 2: Parse json and apply schema to payload
-    .select("struct_payload.*", ...("struct_payload.timestamp").alias("datetime")) # TODO 3: Convert the timestamp column from timestamp to datetime type
+    .withColumn("struct_payload", ...(col("parsedValue"), schema = json_schema)) # TODO 2: Use a spark function to parse json and apply schema to payload
+    .select("struct_payload.*", ...("struct_payload.timestamp").alias("datetime")) # TODO 3: Use a spark function to convert the timestamp column from timestamp to datetime type
     .drop('timestamp')
 )
 

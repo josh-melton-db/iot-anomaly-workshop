@@ -91,7 +91,7 @@ read_raw = (
 # COMMAND ----------
 
 # Display records from the Bronze table
-spark.table(f"{database}.{target_table}")... # TODO: display the results of reading the table
+...(f"{database}.{target_table}")... # TODO 4: display the results of reading the table
 
 # COMMAND ----------
 
