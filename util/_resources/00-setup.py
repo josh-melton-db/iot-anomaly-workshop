@@ -21,8 +21,9 @@ if reset_all_data or is_folder_empty(raw_data_location+"/user_json"):
   print(f"Generating data under {raw_data_location} , please wait a few sec...")
   path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
   parent_count = path[path.rfind("Delta-Lake"):].count('/') - 1
-  prefix = "./" if parent_count == 0 else parent_count*"../"
-  prefix = f'{prefix}'
+#   prefix = "./" if parent_count == 0 else parent_count*"../"
+#   prefix = f'{prefix}'
+  prefix = "../util/_resources/"
   dbutils.notebook.run(prefix+"01-load-data", 120, {"raw_data_location": raw_data_location})
   spark.sql("CREATE TABLE IF NOT EXISTS user_delta (id BIGINT, creation_date TIMESTAMP, firstname STRING, lastname STRING, email STRING, address STRING, gender INT, age_group INT)")
   spark.sql("ALTER TABLE user_delta SET TBLPROPERTIES (delta.enableChangeDataFeed = true)")

@@ -54,7 +54,7 @@
 -- COMMAND ----------
 
 -- DBTITLE 1,Init the demo data under ${raw_data_location}/user_parquet.
--- MAGIC %run ../util/_resources/00-setup $reset_all_data=false
+-- MAGIC %run ../util/_resources/00-setup $reset_all_data=true
 
 -- COMMAND ----------
 
