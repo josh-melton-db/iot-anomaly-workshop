@@ -1,327 +1,281 @@
 # Databricks notebook source
-# MAGIC %md
-# MAGIC # Structured Streaming Concepts
+# MAGIC %md-sandbox
+# MAGIC 
+# MAGIC <div style="text-align: center; line-height: 0; padding-top: 9px;">
+# MAGIC   <img src="https://databricks.com/wp-content/uploads/2018/03/db-academy-rgb-1200px.png" alt="Databricks Learning" style="width: 600px">
+# MAGIC </div>
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="82f45276-7911-4045-b57d-c2891df6f785"/>
+# MAGIC 
+# MAGIC 
+# MAGIC # Incremental Data Ingestion with Auto Loader
+# MAGIC 
+# MAGIC Incremental ETL is important since it allows us to deal solely with new data that has been encountered since the last ingestion. Reliably processing only the new data reduces redundant processing and helps enterprises reliably scale data pipelines.
+# MAGIC 
+# MAGIC The first step for any successful data lakehouse implementation is ingesting into a Delta Lake table from cloud storage. 
+# MAGIC 
+# MAGIC Historically, ingesting files from a data lake into a database has been a complicated process.
+# MAGIC 
+# MAGIC Databricks Auto Loader provides an easy-to-use mechanism for incrementally and efficiently processing new data files as they arrive in cloud file storage. In this notebook, you'll see Auto Loader in action.
+# MAGIC 
+# MAGIC ![](https://files.training.databricks.com/images/autoloader-detection-modes.png)
+# MAGIC 
+# MAGIC Due to the benefits and scalability that Auto Loader delivers, Databricks recommends its use as general **best practice** when ingesting data from cloud object storage.
 # MAGIC 
 # MAGIC ## Learning Objectives
 # MAGIC By the end of this lesson, you should be able to:
-# MAGIC * Describe the programming model used by Spark Structured Streaming
-# MAGIC * Configure required options to perform a streaming read on a source
-# MAGIC * Describe the requirements for end-to-end fault tolerance
-# MAGIC * Configure required options to perform a streaming write to a sink
-# MAGIC * Interact with streaming queries and stop active streams
+# MAGIC * Execute Auto Loader code to incrementally ingest data from cloud storage to Delta Lake
+# MAGIC * Describe what happens when a new file arrives in a directory configured for Auto Loader
+# MAGIC * Query a table fed by a streaming Auto Loader query
 # MAGIC 
-# MAGIC ## Datasets Used
-# MAGIC The source contains smartphone accelerometer samples from devices and users with the following columns:
+# MAGIC ## Dataset Used
+# MAGIC This demo uses simplified artificially generated medical data representing heart rate recordings delivered in the JSON format. 
 # MAGIC 
-# MAGIC | Field          | Description |
-# MAGIC | ------------- | ----------- |
-# MAGIC | Arrival_Time | time data was received |
-# MAGIC | Creation_Time | event time |
-# MAGIC | Device | type of Model |
-# MAGIC | Index | unique identifier of event |
-# MAGIC | Model | i.e Nexus4  |
-# MAGIC | User | unique user identifier |
-# MAGIC | geolocation | city & country |
-# MAGIC | gt | transportation mode |
-# MAGIC | id | unused null field |
-# MAGIC | x | acceleration in x-dir |
-# MAGIC | y | acceleration in y-dir |
-# MAGIC | z | acceleration in z-dir |
+# MAGIC | Field | Type |
+# MAGIC | --- | --- |
+# MAGIC | device_id | int |
+# MAGIC | mrn | long |
+# MAGIC | time | double |
+# MAGIC | heartrate | double |
 
 # COMMAND ----------
 
-# MAGIC %md
+# MAGIC %md <i18n value="3b8b82a4-9dd3-4b4d-a591-dca88bd064c6"/>
+# MAGIC 
+# MAGIC 
 # MAGIC 
 # MAGIC ## Getting Started
 # MAGIC 
-# MAGIC Run the following cell to configure our "classroom."
+# MAGIC Run the following cell to reset the demo and configure required variables and help functions.
 
 # COMMAND ----------
 
-# MAGIC %run ../util/classic-setup $mode="reset"
+# MAGIC %run ../util/Streaming_Helpers/Classroom_Setup
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## End-to-end Fault Tolerance
+# MAGIC %md <i18n value="188f9a32-fc72-40da-844a-b87cd14e358e"/>
 # MAGIC 
-# MAGIC Structured Streaming ensures end-to-end exactly-once fault-tolerance guarantees through _checkpointing_ (discussed below) and <a href="https://en.wikipedia.org/wiki/Write-ahead_logging" target="_blank">Write Ahead Logs</a>.
 # MAGIC 
-# MAGIC Structured Streaming sources, sinks, and the underlying execution engine work together to track the progress of stream processing. If a failure occurs, the streaming engine attempts to restart and/or reprocess the data.
-# MAGIC For best practices on recovering from a failed streaming query see <a href="">docs</a>.
+# MAGIC ## Using Auto Loader
 # MAGIC 
-# MAGIC This approach _only_ works if the streaming source is replayable; replayable sources include cloud-based object storage and pub/sub messaging services.
+# MAGIC In the cell below, a function is defined to demonstrate using Databricks Auto Loader with the PySpark API. This code includes both a Structured Streaming read and write.
 # MAGIC 
-# MAGIC At a high level, the underlying streaming mechanism relies on a couple approaches:
+# MAGIC The following notebook will provide a more robust overview of Structured Streaming. If you wish to learn more about Auto Loader options, refer to the <a href="https://docs.databricks.com/spark/latest/structured-streaming/auto-loader.html" target="_blank">documentation</a>.
 # MAGIC 
-# MAGIC * First, Structured Streaming uses checkpointing and write-ahead logs to record the offset range of data being processed during each trigger interval.
-# MAGIC * Next, the streaming sinks are designed to be _idempotent_—that is, multiple writes of the same data (as identified by the offset) do _not_ result in duplicates being written to the sink.
+# MAGIC Note that when using Auto Loader with automatic <a href="https://docs.databricks.com/spark/latest/structured-streaming/auto-loader-schema.html" target="_blank">schema inference and evolution</a>, the 4 arguments shown here should allow ingestion of most datasets. These arguments are explained below.
 # MAGIC 
-# MAGIC Taken together, replayable data sources and idempotent sinks allow Structured Streaming to ensure **end-to-end, exactly-once semantics** under any failure condition.
+# MAGIC | argument | what it is | how it's used |
+# MAGIC | --- | --- | --- |
+# MAGIC | **`data_source`** | The directory of the source data | Auto Loader will detect new files as they arrive in this location and queue them for ingestion; passed to the **`.load()`** method |
+# MAGIC | **`source_format`** | The format of the source data |  While the format for all Auto Loader queries will be **`cloudFiles`**, the format of the source data should always be specified for the **`cloudFiles.format`** option |
+# MAGIC | **`table_name`** | The name of the target table | Spark Structured Streaming supports writing directly to Delta Lake tables by passing a table name as a string to the **`.table()`** method. Note that you can either append to an existing table or create a new table |
+# MAGIC | **`checkpoint_directory`** | The location for storing metadata about the stream | This argument is passed to the **`checkpointLocation`** and **`cloudFiles.schemaLocation`** options. Checkpoints keep track of streaming progress, while the schema location tracks updates to the fields in the source dataset |
+# MAGIC 
+# MAGIC **NOTE**: The code below has been streamlined to demonstrate Auto Loader functionality. We'll see in later lessons that additional transformations can be applied to source data before saving them to Delta Lake.
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC 
-# MAGIC ## Reading a Stream
-# MAGIC 
-# MAGIC The `readStream` method returns a `DataStreamReader` used to configure the stream.
-# MAGIC 
-# MAGIC Configuring a streaming read on a source requires:
-# MAGIC * The schema of the data
-# MAGIC * The `format` of the source [(file format or named connector)](https://docs.microsoft.com/en-us/azure/databricks/spark/latest/structured-streaming/data-sources)
-# MAGIC * Configurations specific to the source:
-# MAGIC   * [Kafka](https://docs.databricks.com/spark/latest/structured-streaming/kafka.html)
-# MAGIC   * [Event Hubs](https://docs.databricks.com/spark/latest/structured-streaming/streaming-event-hubs.html)
+def autoload_to_table(data_source, source_format, table_name, checkpoint_directory):
+    query = (spark.readStream
+                  .format("cloudFiles")
+                  .option("cloudFiles.format", source_format)
+                  .option("cloudFiles.schemaLocation", checkpoint_directory)
+                  .load(data_source)
+                  .writeStream
+                  .option("checkpointLocation", checkpoint_directory)
+                  .option("mergeSchema", "true")
+                  .table(table_name))
+    return query
 
 # COMMAND ----------
 
-# MAGIC %md
+# MAGIC %md <i18n value="cf70df0f-f945-4efb-b8d0-e90d86d0bf9b"/>
 # MAGIC 
-# MAGIC ### The Schema
 # MAGIC 
-# MAGIC Every streaming DataFrame must have a schema. When connecting to pub/sub systems like Kafka and Event Hubs, the schema will be automatically provided by the source.
+# MAGIC In the following cell, we use the previously defined function and some path variables defined in the setup script to begin an Auto Loader stream.
 # MAGIC 
-# MAGIC For other streaming sources, the schema must be user-defined. It is not safe to infer schema from files, as the assumption is that the source is growing indefinitely from zero records.
+# MAGIC Here, we're reading from a source directory of JSON files.
 
 # COMMAND ----------
 
-schema = "Arrival_Time BIGINT, Creation_Time BIGINT, Device STRING, Index BIGINT, Model STRING, User STRING, geolocation STRUCT<city: STRING, country: STRING>, gt STRING, id BIGINT, x DOUBLE, y DOUBLE, z DOUBLE"
+query = autoload_to_table(data_source = f"{DA.paths.working_dir}/tracker",
+                          source_format = "json",
+                          table_name = "target_table",
+                          checkpoint_directory = f"{DA.paths.checkpoints}/target_table")
+
 
 # COMMAND ----------
 
-# MAGIC %md-sandbox
-# MAGIC ### Differences between Static and Streaming Reads
+# MAGIC %md <i18n value="6d136721-85f1-474f-aaa1-3de8c2981e21"/>
 # MAGIC 
-# MAGIC In the cell below, a static and streaming read are each defined against the same source (files in a directory on a cloud object store). Note that the syntax is identical except that the streaming query uses `readStream` instead of `read`.
 # MAGIC 
-# MAGIC <img alt="Side Note" title="Side Note" style="vertical-align: text-bottom; position: relative; height:1.75em; top:0.05em; transform:rotate(15deg)" src="https://files.training.databricks.com/static/images/icon-note.webp"/> While `maxFilesPerTrigger` will be used throughout the material in this course to limit how quickly source files are consumed, this is optional and for demonstration purposes. This option allows control over how much data will be processed in each micro-batch.
+# MAGIC Because Auto Loader uses Spark Structured Streaming to load data incrementally, the code above doesn't appear to finish executing.
+# MAGIC 
+# MAGIC We can think of this as a **continuously active query**. This means that as soon as new data arrives in our data source, it will be processed through our logic and loaded into our target table. We'll explore this in just a second.
 
 # COMMAND ----------
 
-dataPath = "/mnt/training/definitive-guide/data/activity-json/streaming"
-
-staticDF = (spark
-  .read
-  .format("json")
-  .schema(schema)
-  .load(dataPath)
-)
-
-streamingDF = (spark
-  .readStream
-  .format("json")
-  .schema(schema)
-  .option("maxFilesPerTrigger", 1)     # Optional; force processing of only 1 file per trigger 
-  .load(dataPath)
-)
+# MAGIC %md <i18n value="96a80d56-2fea-4865-8d80-73aea7a0169a"/>
+# MAGIC 
+# MAGIC 
+# MAGIC ## Helper Function for Streaming Lessons
+# MAGIC 
+# MAGIC Our notebook-based lessons combine streaming functions with batch and streaming queries against the results of those operations. These notebooks are for instructional purposes and intended for interactive, cell-by-cell execution. This pattern is not intended for production.
+# MAGIC 
+# MAGIC Below, we define a helper function that prevents our notebook from executing the next cell just long enough to ensure data has been written out by a given streaming query. This code should not be necessary in a production job.
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC Just like with static DataFrames, data is not processed and jobs are not triggered until an action is called.
+def block_until_stream_is_ready(query, min_batches=2):
+    import time
+    while len(query.recentProgress) < min_batches:
+        time.sleep(5) # Give it a couple of seconds
+
+    print(f"The stream has processed {len(query.recentProgress)} batchs")
+
+block_until_stream_is_ready(query)
 
 # COMMAND ----------
 
-# MAGIC %md
+# MAGIC %md <i18n value="56f6dfa2-c638-4812-8d7b-d4d480f97364"/>
 # MAGIC 
-# MAGIC ## Writing a Stream
 # MAGIC 
-# MAGIC The method `DataFrame.writeStream` returns a `DataStreamWriter` used to configure the output of the stream.
+# MAGIC ## Query Target Table
 # MAGIC 
-# MAGIC There are a number of required parameters to configure a streaming write:
-# MAGIC * The `format` of the **output sink** (see [documentation](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#output-sinks))
-# MAGIC * The location of the **checkpoint directory**
-# MAGIC * The **output mode**
-# MAGIC * Configurations specific to the output sink, such as:
-# MAGIC   * [Kafka](https://docs.databricks.com/spark/latest/structured-streaming/kafka.html)
-# MAGIC   * [Event Hubs](https://docs.databricks.com/spark/latest/structured-streaming/streaming-event-hubs.html)
-# MAGIC   * A <a href="https://spark.apache.org/docs/latest/api/python/pyspark.sql.html?highlight=foreach#pyspark.sql.streaming.DataStreamWriter.foreach"target="_blank">custom sink</a> via `writeStream.foreach(...)`
-# MAGIC 
-# MAGIC Once the configuration is completed, trigger the job with a call to `.start()`. When writing to files, use `.start(filePath)`.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Checkpointing
-# MAGIC 
-# MAGIC Databricks creates checkpoints by storing the current state of your streaming job to Azure Blob Storage or ADLS.
-# MAGIC 
-# MAGIC Checkpointing combines with write ahead logs to allow a terminated stream to be restarted and continue from where it left off.
-# MAGIC 
-# MAGIC Checkpoints cannot be shared between separate streams.
-
-# COMMAND ----------
-
-# MAGIC %md-sandbox
-# MAGIC 
-# MAGIC ### Output Modes
-# MAGIC 
-# MAGIC Streaming jobs have output modes similar to static/batch workloads. [More details here](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#output-modes).
-# MAGIC 
-# MAGIC <table>
-# MAGIC <tr><td><b>Mode</b></td> <td><b>Example</b></td> <td><b>Notes</b></td></tr>
-# MAGIC <tr><td>Append</td> <td>`.outputMode("append")` </td> <td>DEFAULT - Only the new rows appended to the Result Table since the last trigger are written to the sink.</td></tr>
-# MAGIC <tr><td>Complete</td> <td>`.outputMode("complete")`</td> <td>The entire updated Result Table is written to the sink. The individual sink implementation decides how to handle writing the entire table.</td></tr>
-# MAGIC <tr><td>Update</td> <td>`.outputMode("update")`</td> <td>Only the rows in the Result Table that were updated since the last trigger will be outputted to the sink. Since Spark 2.1.1</td></tr>
-# MAGIC </table>
-# MAGIC <img alt="Caution" title="Caution" style="vertical-align: text-bottom; position: relative; height:1.3em; top:0.0em" src="https://files.training.databricks.com/static/images/icon-warning.svg"/> Not all sinks will support `update` mode.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Differences between Static and Streaming Writes
-# MAGIC 
-# MAGIC The following cell demonstrates batch logic to append data from a static read.
-
-# COMMAND ----------
-
-outputPath = userhome + "/static-write"
-
-dbutils.fs.rm(outputPath, True)    # clear this directory in case lesson has been run previously
-
-(staticDF                                
-  .write                                               
-  .format("delta")                                          
-  .mode("append")                                       
-  .save(outputPath))
-
-# COMMAND ----------
-
-# MAGIC %md-sandbox
-# MAGIC Note that there are only minor syntax differences when writing a stream instead:
-# MAGIC - `writeStream` instead of `write`
-# MAGIC - The path for the checkpoint is provided to the option `checkpointLocation`
-# MAGIC - `outputMode` instead of `mode` (note that streaming uses `complete` instead of `overwrite` for similar functionality here)
-# MAGIC - `start` instead of `save`
-# MAGIC 
-# MAGIC The following cell demonstrates a streaming write to Delta files.
-# MAGIC 
-# MAGIC <img alt="Side Note" title="Side Note" style="vertical-align: text-bottom; position: relative; height:1.75em; top:0.05em; transform:rotate(15deg)" src="https://files.training.databricks.com/static/images/icon-note.webp"/> Assigning a variable name when writing to a sink provides programmatic access to a `StreamingQuery` object. This will be discussed below.
-
-# COMMAND ----------
-
-outputPath = userhome + "/streaming-concepts"
-checkpointPath = outputPath + "/checkpoint"
-
-dbutils.fs.rm(outputPath, True)    # clear this directory in case lesson has been run previously
-
-streamingQuery = (streamingDF                                
-  .writeStream                                                
-  .format("delta")                                          
-  .option("checkpointLocation", checkpointPath)               
-  .outputMode("append")
-#   .queryName("my_stream")        # optional argument to register stream to Spark catalog
-  .start(outputPath)                                       
-)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Streaming with Delta Lake
-# MAGIC 
-# MAGIC In the logic defined above, data is read from JSON files and then saved out in the Delta Lake format. Note that because Delta creates a new version for each transaction, when working with streaming data this will mean that the Delta table creates a new version for each trigger interval in which new data is processed. [More info on streaming with Delta](https://docs.databricks.com/delta/delta-streaming.html#table-streaming-reads-and-writes).
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC 
-# MAGIC ## Defining the Trigger Interval
-# MAGIC 
-# MAGIC When defining a streaming write, the `trigger` method specifies when the system should process the next set of data. The example above uses the default, which is the same as `.trigger(Trigger.ProcessingTime("500 ms"))`.
-# MAGIC 
-# MAGIC | Trigger Type                           | Example | Notes |
-# MAGIC |----------------------------------------|-----------|-------------|
-# MAGIC | Unspecified                            |  | _DEFAULT_ - The query will be executed as soon as the system has completed processing the previous query |
-# MAGIC | Fixed interval micro-batches           | `.trigger(Trigger.ProcessingTime("2 minutes"))` | The query will be executed in micro-batches and kicked off at the user-specified intervals |
-# MAGIC | One-time micro-batch                   | `.trigger(Trigger.Once())` | The query will execute _only one_ micro-batch to process all the available data and then stop on its own |
-# MAGIC | Continuous w/fixed checkpoint interval | `.trigger(Trigger.Continuous("1 second"))` | The query will be executed in a low-latency, <a href="http://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#continuous-processing" target = "_blank">continuous processing mode</a>. _EXPERIMENTAL_ in 2.3.2 |
-# MAGIC 
-# MAGIC Note that triggers are specified when defining how data will be written to a sink and control the frequency of micro-batches. By default, Spark will automatically detect and process all data in the source that has been added since the last trigger; some sources allow configuration to limit the size of each micro-batch.
-# MAGIC 
-# MAGIC BEST_PRACTICE: Read [this blog post](https://databricks.com/blog/2017/05/22/running-streaming-jobs-day-10x-cost-savings.html) to learn more about using `Trigger.Once` to simplify CDC with a hybrid streaming/batch design.
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC The code below stops the `streamingQuery` defined above and introduces `awaitTermination()`
-# MAGIC 
-# MAGIC `awaitTermination()` will block the current thread
-# MAGIC * Until the stream stops or
-# MAGIC * Until the specified timeout elapses
-
-# COMMAND ----------
-
-streamingQuery.awaitTermination(5)      # Stream for another 5 seconds while the current thread blocks
-streamingQuery.stop()                   # Stop the stream
-
-# COMMAND ----------
-
-# MAGIC %md-sandbox
-# MAGIC 
-# MAGIC ## The Display function
-# MAGIC 
-# MAGIC Within the Databricks notebooks, we can use the `display()` function to render a live plot. This stream is written to memory; **generally speaking this is most useful for debugging purposes**.
-# MAGIC 
-# MAGIC When you pass a "streaming" `DataFrame` to `display()`:
-# MAGIC * A "memory" sink is being used
-# MAGIC * The output mode is complete
-# MAGIC * *OPTIONAL* - The query name is specified with the `streamName` parameter
-# MAGIC * *OPTIONAL* - The trigger is specified with the `trigger` parameter
-# MAGIC * *OPTIONAL* - The checkpointing location is specified with the `checkpointLocation`
-# MAGIC 
-# MAGIC `display(myDF, streamName = "myQuery")`
-# MAGIC 
-# MAGIC <img alt="Side Note" title="Side Note" style="vertical-align: text-bottom; position: relative; height:1.75em; top:0.05em; transform:rotate(15deg)" src="https://files.training.databricks.com/static/images/icon-note.webp"/> The previous cell programmatically stopped only active streaming query. In the cell below, `display` will start a new streaming query against the source defined in `streamingDF`.  We are passing `streaming_display` as the name for this newly started stream.
-
-# COMMAND ----------
-
-display(streamingDF, streamName = "streaming_display")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Since the `streamName` gets registered as a temporary table pointing to the memory sink, we can use SQL to query the sink.
+# MAGIC Once data has been ingested to Delta Lake with Auto Loader, users can interact with it the same way they would any table.
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT * FROM streaming_display WHERE gt = "stand"
+# MAGIC SELECT * FROM target_table
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC Stop all remaining streams.
+# MAGIC %md <i18n value="2bcece5b-7175-4b55-ab2c-40a67115a764"/>
+# MAGIC 
+# MAGIC 
+# MAGIC Note that the **`_rescued_data`** column is added by Auto Loader automatically to capture any data that might be malformed and not fit into the table otherwise.
+# MAGIC 
+# MAGIC While Auto Loader captured the field names for our data correctly, note that it encoded all fields as **`STRING`** type. Because JSON is a text-based format, this is the safest and most permissive type, ensuring that the least amount of data is dropped or ignored at ingestion due to type mismatch.
 
 # COMMAND ----------
 
-for s in spark.streams.active:
-  s.stop()
+# MAGIC %sql
+# MAGIC DESCRIBE TABLE target_table
 
 # COMMAND ----------
 
-# MAGIC %md
+# MAGIC %md <i18n value="96d695c6-45f5-4d3e-b822-2fec12d72664"/>
 # MAGIC 
-# MAGIC <h2><img src="https://files.training.databricks.com/images/105/logo_spark_tiny.png"> Summary</h2>
 # MAGIC 
-# MAGIC We use `readStream` to read streaming input from a variety of input sources and create a DataFrame.
+# MAGIC Use the cell below to define a temporary view that summarizes the recordings in our target table.
 # MAGIC 
-# MAGIC Nothing happens until we invoke `writeStream` or `display`.
-# MAGIC 
-# MAGIC Using `writeStream` we can write to a variety of output sinks. Using `display` we draw LIVE bar graphs, charts and other plot types in the notebook.
+# MAGIC We'll use this view below to demonstrate how new data is automatically ingested with Auto Loader.
 
 # COMMAND ----------
 
-# MAGIC %md
+# MAGIC %sql
+# MAGIC CREATE OR REPLACE TEMP VIEW device_counts AS
+# MAGIC   SELECT device_id, count(*) total_recordings
+# MAGIC   FROM target_table
+# MAGIC   GROUP BY device_id;
+# MAGIC   
+# MAGIC SELECT * FROM device_counts
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="8048e413-c4c9-406c-be74-c541f976c8e3"/>
 # MAGIC 
-# MAGIC <h2><img src="https://files.training.databricks.com/images/105/logo_spark_tiny.png"> Additional Topics &amp; Resources</h2>
-# MAGIC * <a href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#" target="_blank">Structured Streaming Programming Guide</a></br>
-# MAGIC * <a href="https://www.youtube.com/watch?v=rl8dIzTpxrI" target="_blank">A Deep Dive into Structured Streaming</a> by Tathagata Das. This is an excellent video describing how Structured Streaming works.</br>
+# MAGIC 
+# MAGIC ## Land New Data
+# MAGIC 
+# MAGIC As mentioned previously, Auto Loader is configured to incrementally process files from a directory in cloud object storage into a Delta Lake table.
+# MAGIC 
+# MAGIC We have configured and are currently executing a query to process JSON files from the location specified by **`source_path`** into a table named **`target_table`**. Let's review the contents of the **`source_path`** directory.
+
+# COMMAND ----------
+
+files = dbutils.fs.ls(f"{DA.paths.working_dir}/tracker")
+display(files)
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="f7573e55-b6ab-46ad-9eae-cd037b4f554f"/>
+# MAGIC 
+# MAGIC 
+# MAGIC At present, you should see a single JSON file listed in this location.
+# MAGIC 
+# MAGIC The method in the cell below was configured in our setup script to allow us to model an external system writing data to this directory. Each time you execute the cell below, a new file will land in the **`source_path`** directory.
+
+# COMMAND ----------
+
+DA.data_factory.load()
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="a8eeb778-e14e-42fc-90d1-86ed69ad06fb"/>
+# MAGIC 
+# MAGIC 
+# MAGIC List the contents of the **`source_path`** again using the cell below. You should see an additional JSON file for each time you ran the previous cell.
+
+# COMMAND ----------
+
+files = dbutils.fs.ls(f"{DA.paths.working_dir}/tracker")
+display(files)
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="d8323fbe-942c-405a-b3f1-5f4a3785ad95"/>
+# MAGIC 
+# MAGIC 
+# MAGIC ## Tracking Ingestion Progress
+# MAGIC 
+# MAGIC Historically, many systems have been configured to either reprocess all records in a source directory to calculate current results or require data engineers to implement custom logic to identify new data that's arrived since the last time a table was updated.
+# MAGIC 
+# MAGIC With Auto Loader, your table has already been updated.
+# MAGIC 
+# MAGIC Run the query below to confirm that new data has been ingested.
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT * FROM device_counts
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="b630929e-6d09-46d8-9cd0-2d5418b5840c"/>
+# MAGIC 
+# MAGIC 
+# MAGIC The Auto Loader query we configured earlier automatically detects and processes records from the source directory into the target table. There is a slight delay as records are ingested, but an Auto Loader query executing with default streaming configuration should update results in near real time.
+# MAGIC 
+# MAGIC The query below shows the table history. A new table version should be indicated for each **`STREAMING UPDATE`**. These update events coincide with new batches of data arriving at the source.
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC DESCRIBE HISTORY target_table
+
+# COMMAND ----------
+
+# MAGIC %md <i18n value="a01651f5-70c8-45a4-859e-f9976eacf7a1"/>
+# MAGIC 
+# MAGIC 
+# MAGIC ## Clean Up
+# MAGIC Feel free to continue landing new data and exploring the table results with the cells above.
+# MAGIC 
+# MAGIC When you're finished, run the following cell to stop all active streams and remove created resources before continuing.
+
+# COMMAND ----------
+
+DA.cleanup()
 
 # COMMAND ----------
 
 # MAGIC %md-sandbox
-# MAGIC &copy; 2021 Databricks, Inc. All rights reserved.<br/>
-# MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="http://www.apache.org/">Apache Software Foundation</a>.<br/>
+# MAGIC &copy; 2023 Databricks, Inc. All rights reserved.<br/>
+# MAGIC Apache, Apache Spark, Spark and the Spark logo are trademarks of the <a href="https://www.apache.org/">Apache Software Foundation</a>.<br/>
 # MAGIC <br/>
-# MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="http://help.databricks.com/">Support</a>
+# MAGIC <a href="https://databricks.com/privacy-policy">Privacy Policy</a> | <a href="https://databricks.com/terms-of-use">Terms of Use</a> | <a href="https://help.databricks.com/">Support</a>
