@@ -84,6 +84,7 @@ def autoload_to_table(data_source, source_format, table_name, checkpoint_directo
                   .option("cloudFiles.format", source_format)
                   .option("cloudFiles.schemaLocation", checkpoint_directory)
                   .load(data_source)
+                  # Can add normal spark transformations here
                   .writeStream
                   .option("checkpointLocation", checkpoint_directory)
                   .option("mergeSchema", "true")
