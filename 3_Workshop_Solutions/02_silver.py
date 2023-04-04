@@ -35,7 +35,7 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-from pyspark.sql.functions import from_json, from_unixtime
+from pyspark.sql.functions import from_json, from_unixtime, col
 from pyspark.sql.types import StructType, StructField, FloatType, IntegerType, StringType
 
 bronze_df = (

@@ -25,6 +25,10 @@
 
 # COMMAND ----------
 
+# MAGIC %pip install dbldatagen
+
+# COMMAND ----------
+
 # MAGIC %run ./notebook-config $reset_all_data=false
 
 # COMMAND ----------

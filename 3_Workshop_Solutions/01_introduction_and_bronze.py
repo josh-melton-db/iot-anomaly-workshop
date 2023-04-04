@@ -24,6 +24,10 @@
 
 # COMMAND ----------
 
+# MAGIC %run ../util/generate-iot-data
+
+# COMMAND ----------
+
 # DBTITLE 1,Define configs that are consistent throughout the accelerator
 # MAGIC %run ../util/notebook-config
 
@@ -36,10 +40,6 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-# MAGIC %run ../util/generate-iot-data
-
-# COMMAND ----------
-
 # MAGIC %md 
 # MAGIC 
 # MAGIC ### Write the streaming source data to Bronze Delta table
@@ -48,7 +48,7 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 
 # COMMAND ----------
 
-from pyspark.sql.types import StructType, StructField, StringType()
+from pyspark.sql.types import StructType, StructField, StringType
 expected_schema = StructType([StructField('parsedValue', StringType(), True)])
 
 # COMMAND ----------
