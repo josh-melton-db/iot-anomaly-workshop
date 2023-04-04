@@ -18,7 +18,7 @@
 # MAGIC - Load and transform IoT streaming data into Delta 
 # MAGIC - Surface insights like anomalies on streamed signals in near real-time
 # MAGIC </br></br>
-# MAGIC Getting started </br>
+# MAGIC <b>Getting started</b> </br>
 # MAGIC Although specific solutions can be downloaded as .dbc archives from our websites, we recommend cloning these repositories onto your databricks environment. Not only will you get access to latest code, but you will be part of a community of experts driving industry best practices and re-usable solutions, influencing our respective industries. To start, simply clone solution accelerator repository in Databricks using Databricks Repos
 
 # COMMAND ----------
