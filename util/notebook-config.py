@@ -13,7 +13,7 @@ mlflow.set_experiment('/Users/{}/iot_anomaly_detection'.format(username))
 
 user = username.split('@')[0]
 checkpoint_path = f"/dbfs/tmp/{user}/iot-anomaly-detection/checkpoints" 
-raw_path = f"/dbfs/tmp/{user}/iot-anomaly-detection/raw"
+raw_path = f"/dbfs/tmp/josh_melton/iot-anomaly-detection/raw"
 database = f"iot_anomaly"
 bronze = f"bronze_iot_anomaly_{user}"
 silver = f"silver_iot_anomaly_{user}"
