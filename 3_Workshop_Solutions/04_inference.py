@@ -36,6 +36,7 @@ checkpoint_location_target = f"{checkpoint_path}/{target_table}"
 # Read Silver Data
 silver_df = (
   spark.readStream
+    .option('ignoreChanges', 'true')
     .format("delta")
     .table(f"{database}.{source_table}")
 )
