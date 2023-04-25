@@ -138,6 +138,11 @@ with ... as run: # TODO 2: start an MLflow run so that our trial gets tracked in
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC Note: we're hardcoding the parameters for our model, but if you'd like to see this example with automated hyperparameter tuning please check the solutions notebook
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC 
 # MAGIC You can look at the experiment logging including parameters, metrics, recall curves, etc. by clicking the "experiment" link above or the MLflow Experiments icon in the right navigation pane. You can try running with different parameters and use the experiment to track what produces the best results. Once we're done with experimentation we'll register the model to our MLflow model registry
 

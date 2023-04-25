@@ -87,11 +87,25 @@ def predict_anomalies(data, epoch_id):
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Example of retrieving the current production stage model, registering it as a spark function, and using it to make a prediction:
+# MAGIC ```
+# MAGIC query = (spark.readStream.table("bronze")
+# MAGIC               .writeStream
+# MAGIC               .foreachBatch(batch_function)
+# MAGIC               .option("checkpointLocation", f"{DA.paths.checkpoints}/split_stream")
+# MAGIC               .trigger(availableNow=True)
+# MAGIC               .start())
+# MAGIC query.awaitTermination()
+# MAGIC ```
+
+# COMMAND ----------
+
 # Make predictions on the streaming data coming in
 (
   silver_df
-    .writeStream
-    .foreachBatch(predict_anomalies) 
+    ... # TODO 4: Write the streaming dataframe
+    ...(predict_anomalies) # TODO 5: Run the predict_anomalies function on each micro batch 
     .trigger(availableNow=True)
     .start()
     .awaitTermination()
