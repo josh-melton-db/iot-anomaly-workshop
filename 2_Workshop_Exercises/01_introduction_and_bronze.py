@@ -91,7 +91,7 @@ read_raw = (
 # COMMAND ----------
 
 # Display records from the Bronze table
-...(f"{database}.{target_table}")... # TODO 4: display the results of reading the table
+...(f"{database}.{target_table}")... # TODO 4: read from the bronze table and display the results
 
 # COMMAND ----------
 
